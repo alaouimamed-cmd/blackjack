@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
+// This is your Prisma schema for Moroccan Invoicing Application
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -11,6 +8,126 @@ generator client {
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+model Company {
+  id              String   @id @default(cuid())
+  name            String
+  address         String
+  city            String
+  ice             String   @unique // Identifiant Commun de l'Entreprise
+  pat             String?  // Patente
+  mf              String?  // Modèle Formulaire
+  rc              String?  // Registre de Commerce
+  if              String?  // Identifiant Fiscal
+  phone           String?
+  email           String?
+  logo            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  invoices        Invoice[]
+  clients         Client[]
+  products        Product[]
+}
+
+model Client {
+  id              String   @id @default(cuid())
+  name            String
+  type            String   @default("particulier") // particulier ou entreprise
+  address         String?
+  city            String?
+  ice             String?  // Pour les entreprises
+  pat             String?
+  mf              String?
+  rc              String?
+  if              String?
+  phone           String?
+  email           String?
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  invoices        Invoice[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Product {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  priceHT         Float
+  tvaRate         Float    @default(20.0) // Taux TVA par défaut 20%
+  unit            String   @default("unité") // unité, kg, litre, etc.
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  invoiceItems    InvoiceItem[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  number          String   @unique // Numéro de facture (ex: FAC-2025-001)
+  date            DateTime @default(now())
+  dueDate         DateTime?
+  status          String   @default("brouillon") // brouillon, envoyee, payee_partiellement, payee, annulee
+  type            String   @default("facture") // facture, devis, bon_livraison, avoir
+  
+  // Informations client
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id])
+  
+  // Montants
+  totalHT         Float    @default(0.0)
+  tvaAmount       Float    @default(0.0)
+  timbreFiscal    Float    @default(0.0) // Timbre fiscal obligatoire au Maroc
+  totalTTC        Float    @default(0.0)
+  amountPaid      Float    @default(0.0)
+  remainingAmount Float    @default(0.0)
+  
+  // Notes
+  notes           String?
+  conditions      String? // Conditions de paiement
+  
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  items           InvoiceItem[]
+  payments        Payment[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model InvoiceItem {
+  id              String   @id @default(cuid())
+  invoiceId       String
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id])
+  productId       String?
+  product         Product? @relation(fields: [productId], references: [id])
+  
+  description     String
+  quantity        Float    @default(1.0)
+  priceHT         Float
+  tvaRate         Float    @default(20.0)
+  totalHT         Float
+  tvaAmount       Float
+  totalTTC        Float
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  invoiceId       String
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id])
+  amount          Float
+  date            DateTime @default(now())
+  method          String   @default("especes") // especes, virement, cheque, carte
+  reference       String?  // Référence du paiement (numéro chèque, virement, etc.)
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model User {
