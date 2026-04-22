@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Factures - Facturation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Liste des factures</h2>
+    <a href="{{ url_for('creer_facture') }}" class="btn">Créer une facture</a>
+</div>
+
+{% if factures %}
+<table>
+    <thead>
+        <tr>
+            <th>Numéro</th>
+            <th>Client</th>
+            <th>Date de création</th>
+            <th>Date d'échéance</th>
+            <th>Total</th>
+            <th>Statut</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for facture in factures %}
+        <tr>
+            <td>{{ facture.numero }}</td>
+            <td>{{ facture.client.nom }}</td>
+            <td>{{ facture.date_creation.strftime('%d/%m/%Y') }}</td>
+            <td>{{ facture.date_echeance.strftime('%d/%m/%Y') if facture.date_echeance else '-' }}</td>
+            <td>{{ "%.2f"|format(facture.total) }} €</td>
+            <td><span class="statut statut-{{ facture.statut }}">{{ facture.statut }}</span></td>
+            <td>
+                <a href="{{ url_for('voir_facture', id=facture.id) }}" class="btn">Voir</a>
+                {% if facture.statut == 'en_attente' %}
+                <form method="POST" action="{{ url_for('payer_facture', id=facture.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-success">Payer</button>
+                </form>
+                <form method="POST" action="{{ url_for('annuler_facture', id=facture.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir annuler cette facture ?')">Annuler</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="card">
+    <p>Aucune facture créée.</p>
+    <a href="{{ url_for('creer_facture') }}" class="btn">Créer votre première facture</a>
+</div>
+{% endif %}
+{% endblock %}
