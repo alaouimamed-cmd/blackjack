@@ -1,0 +1,38 @@
+================================================================================
+SOCIÉTÉ MAROCAINE DE SERVICES SARL
+123 Boulevard Mohammed V, Casablanca 20000
+Tél: +212 522 12 34 56 | Email: contact@sms-maroc.ma
+ICE: 001234567890123 | RC: 123456 | Patente: 12345678
+IFF: 12345678 | CNSS: 1234567
+================================================================================
+
+FACTURE
+N°: FAC-2024-001
+Date: 22/04/2026
+Référence: BC-2024-042
+
+CLIENT: ENTREPRISE CLIENT SA
+Adresse: 456 Avenue Hassan II, Rabat 10000
+ICE: 009876543210987
+
+--------------------------------------------------------------------------------
+Description                      Qté    Prix HT   Remise           HT   TVA%        TVA        TTC
+--------------------------------------------------------------------------------
+Prestation de conseil en gestion 10.00     500.00     5.0%     4750.00  20.0%    950.00   5700.00
+Formation professionnelle       3.00    1200.00     0.0%     3600.00  10.0%    360.00   3960.00
+Livres techniques (produit culturel)  5.00     150.00     0.0%      750.00   7.0%     52.50    802.50
+Services exonérés (export)      1.00    2000.00     0.0%     2000.00   0.0%      0.00   2000.00
+--------------------------------------------------------------------------------
+                                                 Total HT:    11100.00 DH
+                                                Total TVA:     1362.50 DH
+                                                      TTC:    12462.50 DH
+                                     Timbre fiscal (0.5%):       63.00 DH
+                                              NET À PAYER:    12525.50 DH
+--------------------------------------------------------------------------------
+
+Mode de paiement: Virement bancaire
+Échéance: 15/02/2024
+
+Mentions légales:
+- Conformément à la législation fiscale marocaine en vigueur.
+- Conservez cette facture pendant 10 ans.

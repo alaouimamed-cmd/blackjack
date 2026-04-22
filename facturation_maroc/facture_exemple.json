@@ -1,0 +1,76 @@
+{
+  "numero": "FAC-2024-001",
+  "date_emission": "2026-04-22T18:49:37.659634",
+  "type_facture": "Facture",
+  "reference": "BC-2024-042",
+  "entreprise": {
+    "nom": "SOCIÉTÉ MAROCAINE DE SERVICES SARL",
+    "adresse": "123 Boulevard Mohammed V, Casablanca 20000",
+    "ice": "001234567890123",
+    "rc": "123456",
+    "patente": "12345678",
+    "iff": "12345678",
+    "cnss": "1234567",
+    "telephone": "+212 522 12 34 56",
+    "email": "contact@sms-maroc.ma"
+  },
+  "client": {
+    "nom": "ENTREPRISE CLIENT SA",
+    "adresse": "456 Avenue Hassan II, Rabat 10000",
+    "ice": "009876543210987",
+    "rc": "654321",
+    "telephone": "+212 537 98 76 54",
+    "email": "achats@client-maroc.ma"
+  },
+  "lignes": [
+    {
+      "description": "Prestation de conseil en gestion",
+      "quantite": 10,
+      "prix_unitaire_ht": 500.0,
+      "tva": 20.0,
+      "remise_percent": 5.0,
+      "montant_ht": 4750.0,
+      "montant_tva": 950.0,
+      "montant_ttc": 5700.0
+    },
+    {
+      "description": "Formation professionnelle",
+      "quantite": 3,
+      "prix_unitaire_ht": 1200.0,
+      "tva": 10.0,
+      "remise_percent": 0.0,
+      "montant_ht": 3600.0,
+      "montant_tva": 360.0,
+      "montant_ttc": 3960.0
+    },
+    {
+      "description": "Livres techniques (produit culturel)",
+      "quantite": 5,
+      "prix_unitaire_ht": 150.0,
+      "tva": 7.0,
+      "remise_percent": 0.0,
+      "montant_ht": 750.0,
+      "montant_tva": 52.5,
+      "montant_ttc": 802.5
+    },
+    {
+      "description": "Services exonérés (export)",
+      "quantite": 1,
+      "prix_unitaire_ht": 2000.0,
+      "tva": 0.0,
+      "remise_percent": 0.0,
+      "montant_ht": 2000.0,
+      "montant_tva": 0.0,
+      "montant_ttc": 2000.0
+    }
+  ],
+  "totaux": {
+    "total_ht": 11100.0,
+    "total_tva": 1362.5,
+    "total_ttc": 12462.5,
+    "timbre_fiscal": 63.0,
+    "net_a_payer": 12525.5
+  },
+  "mode_paiement": "Virement bancaire",
+  "echeance": "2024-02-15T00:00:00"
+}

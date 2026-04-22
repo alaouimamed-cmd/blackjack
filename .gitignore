@@ -1,101 +1,35 @@
 ```
-# Dependencies
-node_modules/
-
-# Environment variables
-.env
-.env.local
-.env.*
-
-# Prisma
-prisma/migrations/
-
-# Build outputs
-dist/
-build/
-.next/
-out/
-
-# Logs
-*.log
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# IDE specific
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Python
-__pycache__/
+# Compiled and build artifacts
 *.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
+__pycache__/
+
+# Dependencies
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.git/
+venv/
+node_modules/
 .mypy_cache/
 .pytest_cache/
-.hypothesis/
 
-# Node.js
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-node_modules/
-dist/
-build/
-.nyc_output
-coverage/
-*.lcov
-.nyc_output/
-coverage/
-
-# Next.js
-.next/
-out/
-.next/**
-!next-env.d.ts
-
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
-
-# Temporary files
+# Logs and temp files
+*.log
 *.tmp
-*.temp
-*.bak
 *.swp
-*~
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# OS
 .DS_Store
 Thumbs.db
-
-# Compiled JavaScript
-*.min.js
-*.bundle.js
-
-# Database
-*.db
-*.db-journal
-
-# Local configuration
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 ```
