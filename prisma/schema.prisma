@@ -1,4 +1,5 @@
 // This is your Prisma schema for Moroccan Invoicing Application
+// Conformité: Code Général des Impôts marocain, Loi 09-08 (CNDP), Plan Comptable Marocain
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -10,140 +11,604 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// MULTI-TENANCY & AUTHENTIFICATION
+// ============================================
+
+model Tenant {
+  id              String   @id @default(cuid())
+  name            String   // Nom de l'entreprise/organisation
+  slug            String   @unique // Identifiant unique pour le tenant
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  companies       Company[]
+  users           User[]
+  auditLogs       AuditLog[]
+  
+  @@index([slug])
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String   // bcrypt/argon2
+  name            String?
+  role            Role     @default(user) // RBAC: admin, director, accountant, sales, warehouse, auditor
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  companyId       String?  // Entreprise par défaut de l'utilisateur
+  company         Company? @relation(fields: [companyId], references: [id])
+  lastLoginAt     DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  auditLogs       AuditLog[]
+  
+  @@index([tenantId])
+  @@index([email, tenantId])
+}
+
+enum Role {
+  admin       // Administrateur système (accès complet)
+  director    // Directeur (accès complet sauf config système)
+  accountant  // Comptable (factures, paiements, rapports fiscaux)
+  sales       // Commercial (devis, factures, clients)
+  warehouse   // Magasinier (produits, stock, bons de livraison)
+  auditor     // Auditeur (lecture seule, logs, rapports)
+  user        // Utilisateur standard
+}
+
+// ============================================
+// ENTITÉS MÉTIER - CONFORMITÉ MAROC
+// ============================================
+
 model Company {
   id              String   @id @default(cuid())
-  name            String
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  
+  // Informations légales obligatoires (DGI Maroc)
+  name            String   // Raison sociale
   address         String
   city            String
-  ice             String   @unique // Identifiant Commun de l'Entreprise
+  postalCode      String?
+  country         String   @default("Maroc")
+  
+  // Identifiants fiscaux (obligatoires sur factures)
+  ice             String?  // Identifiant Commun de l'Entreprise (15 chiffres)
   pat             String?  // Patente
   mf              String?  // Modèle Formulaire
   rc              String?  // Registre de Commerce
   if              String?  // Identifiant Fiscal
+  
+  // Contact
   phone           String?
   email           String?
+  website         String?
   logo            String?
+  
+  // Configuration
+  defaultCurrency String   @default("MAD")
+  taxRegime       String   @default("normal") // normal, auto_entrepreneur, exonere
+  fiscalYearStart Month    @default(JANUARY)
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  
   invoices        Invoice[]
   clients         Client[]
+  suppliers       Supplier[]
   products        Product[]
+  warehouses      Warehouse[]
+  invoiceSequences InvoiceSequence[]
+  
+  @@unique([tenantId, ice])
+  @@index([tenantId])
+}
+
+enum Month {
+  JANUARY FEBRUARY MARCH APRIL MAY JUNE
+  JULY AUGUST SEPTEMBER OCTOBER NOVEMBER DECEMBER
+}
+
+// Séquençage des factures (conformité DGI: numérotation continue, non réutilisable)
+model InvoiceSequence {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id])
+  
+  type            String   @default("FAC") // FAC (facture), DEV (devis), BL (bon livraison), AVO (avoir)
+  year            Int      // Année fiscale
+  prefix          String   // Préfixe (ex: FAC-2025-)
+  currentNumber   Int      @default(0) // Dernier numéro utilisé
+  minLength       Int      @default(3) // Longueur minimale (ex: 001)
+  
+  locked          Boolean  @default(false) // Verrouillé pour éviter concurrence
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([companyId, type, year])
+  @@index([companyId, year])
 }
 
 model Client {
   id              String   @id @default(cuid())
-  name            String
-  type            String   @default("particulier") // particulier ou entreprise
+  tenantId        String
+  companyId       String
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  company         Company  @relation(fields: [companyId], references: [id])
+  
+  // Informations client
+  name            String   // Raison sociale ou nom complet
+  type            String   @default("particulier") // particulier, entreprise, auto_entrepreneur
+  
+  // Adresse
   address         String?
   city            String?
-  ice             String?  // Pour les entreprises
+  postalCode      String?
+  country         String   @default("Maroc")
+  
+  // Identifiants fiscaux (pour entreprises)
+  ice             String?
   pat             String?
   mf              String?
   rc              String?
   if              String?
+  
+  // Contact
   phone           String?
+  mobile          String?
+  fax             String?
   email           String?
-  companyId       String
-  company         Company  @relation(fields: [companyId], references: [id])
-  invoices        Invoice[]
+  contactName     String?  // Personne à contacter
+  
+  // Conditions de paiement par défaut
+  paymentTerms    Int?     // Délai en jours
+  defaultPaymentMethod String? @default("especes") // especes, virement, cheque, carte
+  
+  // Statistiques
+  totalInvoiced   Float    @default(0.0)
+  totalPaid       Float    @default(0.0)
+  outstanding     Float    @default(0.0)
+  
+  active          Boolean  @default(true)
+  notes           String?
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  
+  invoices        Invoice[]
+  
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([ice])
+}
+
+model Supplier {
+  id              String   @id @default(cuid())
+  tenantId        String
+  companyId       String
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  company         Company  @relation(fields: [companyId], references: [id])
+  
+  name            String
+  type            String   @default("entreprise")
+  
+  address         String?
+  city            String?
+  postalCode      String?
+  country         String   @default("Maroc")
+  
+  ice             String?
+  pat             String?
+  mf              String?
+  rc              String?
+  if              String?
+  
+  phone           String?
+  email           String?
+  contactName     String?
+  
+  paymentTerms    Int?
+  notes           String?
+  
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([companyId])
 }
 
 model Product {
   id              String   @id @default(cuid())
+  tenantId        String
+  companyId       String
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  company         Company  @relation(fields: [companyId], references: [id])
+  
+  reference       String?  // Référence interne/SKU
+  barcode         String?  // Code-barres/EAN
+  
   name            String
   description     String?
-  priceHT         Float
-  tvaRate         Float    @default(20.0) // Taux TVA par défaut 20%
-  unit            String   @default("unité") // unité, kg, litre, etc.
-  companyId       String
-  company         Company  @relation(fields: [companyId], references: [id])
-  invoiceItems    InvoiceItem[]
+  category        String?
+  
+  // Prix et TVA
+  priceHT         Float    @default(0.0)
+  tvaRate         Float    @default(20.0) // Taux TVA: 20%, 14%, 10%, 7%, 0%
+  tvaExempt       Boolean  @default(false) // Exonération TVA
+  tvaExemptionReason String? // Motif d'exonération (si applicable)
+  
+  unit            String   @default("unité") // unité, kg, litre, mètre, etc.
+  
+  // Stock
+  trackStock      Boolean  @default(true)
+  initialStock    Float    @default(0.0)
+  currentStock    Float    @default(0.0)
+  minStock        Float    @default(0.0) // Seuil d'alerte
+  maxStock        Float?
+  
+  warehouseId     String?
+  warehouse       Warehouse? @relation(fields: [warehouseId], references: [id])
+  
+  active          Boolean  @default(true)
+  notes           String?
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  
+  invoiceItems    InvoiceItem[]
+  stockMovements  StockMovement[]
+  
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([reference])
+  @@index([barcode])
 }
+
+model Warehouse {
+  id              String   @id @default(cuid())
+  tenantId        String
+  companyId       String
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  company         Company  @relation(fields: [companyId], references: [id])
+  
+  name            String
+  address         String?
+  city            String?
+  
+  active          Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  products        Product[]
+  stockMovements  StockMovement[]
+  
+  @@index([tenantId])
+  @@index([companyId])
+}
+
+// ============================================
+// FACTURATION - CONFORMITÉ DGI MAROC
+// ============================================
 
 model Invoice {
   id              String   @id @default(cuid())
-  number          String   @unique // Numéro de facture (ex: FAC-2025-001)
-  date            DateTime @default(now())
-  dueDate         DateTime?
-  status          String   @default("brouillon") // brouillon, envoyee, payee_partiellement, payee, annulee
-  type            String   @default("facture") // facture, devis, bon_livraison, avoir
+  tenantId        String
+  companyId       String
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  company         Company  @relation(fields: [companyId], references: [id])
+  
+  // Numéro de facture (séquentiel, unique, immuable après validation)
+  number          String   // Format: FAC-2025-001
+  internalNumber  String?  // Numéro interne (optionnel)
+  
+  // Dates
+  date            DateTime @default(now()) // Date d'émission
+  dueDate         DateTime? // Date d'échéance
+  deliveryDate    DateTime? // Date de livraison (si différente)
+  
+  // Type et statut
+  type            InvoiceType @default(facture) // facture, devis, bon_livraison, avoir, commande
+  status          InvoiceStatus @default(brouillon)
+  
+  // Références liées
+  originalInvoiceId String? // Pour les avoirs: lien avec facture originale
+  originalInvoice Invoice? @relation("RelatedInvoices", fields: [originalInvoiceId], references: [id])
+  relatedInvoices Invoice[] @relation("RelatedInvoices")
   
   // Informations client
   clientId        String
   client          Client   @relation(fields: [clientId], references: [id])
   
-  // Montants
-  totalHT         Float    @default(0.0)
-  tvaAmount       Float    @default(0.0)
-  timbreFiscal    Float    @default(0.0) // Timbre fiscal obligatoire au Maroc
-  totalTTC        Float    @default(0.0)
-  amountPaid      Float    @default(0.0)
-  remainingAmount Float    @default(0.0)
+  // Adresses de facturation et livraison
+  billingAddress  String?
+  billingCity     String?
+  billingPostalCode String?
   
-  // Notes
-  notes           String?
-  conditions      String? // Conditions de paiement
+  deliveryAddress String?
+  deliveryCity    String?
+  deliveryPostalCode String?
   
-  companyId       String
-  company         Company  @relation(fields: [companyId], references: [id])
+  // Lignes de facture
   items           InvoiceItem[]
-  payments        Payment[]
+  
+  // Totaux
+  subtotalHT      Float    @default(0.0) // Total HT avant remises
+  discountPercent Float    @default(0.0) // Remise globale en %
+  discountAmount  Float    @default(0.0) // Remise globale en montant
+  totalHT         Float    @default(0.0) // Total HT après remises
+  totalTVA        Float    @default(0.0) // Total TVA
+  timbreFiscal    Float    @default(0.0) // Timbre fiscal (paiement espèces > 5000 DH)
+  totalTTC        Float    @default(0.0) // Total TTC
+  totalPaid       Float    @default(0.0) // Montant payé
+  remainingAmount Float    @default(0.0) // Reste à payer
+  
+  // Conditions et notes
+  paymentTerms    String?  // Conditions de paiement (ex: "30 jours fin de mois")
+  paymentMethod   String?  // Mode de paiement (especes, virement, cheque, carte)
+  bankDetails     String?  // Coordonnées bancaires (IBAN) si virement
+  notes           String?  // Notes internes (non visibles sur facture)
+  footerNotes     String?  // Notes bas de page (visibles sur facture)
+  legalMentions   String?  // Mentions légales spécifiques
+  
+  // Validation et audit
+  validatedAt     DateTime? // Date de validation (rend la facture immuable)
+  validatedBy     String?   // Utilisateur ayant validé
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancellationReason String?
+  
+  // Export et conformité
+  exportedToAccounting Boolean @default(false)
+  accountingEntryRef String? // Référence écriture comptable
+  qrCodeData        String?  // Données QR code pour e-facturation future
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  
+  payments        Payment[]
+  auditLogs       AuditLog[]
+  
+  @@unique([companyId, number])
+  @@index([tenantId])
+  @@index([companyId])
+  @@index([clientId])
+  @@index([type, status])
+  @@index([date])
+}
+
+enum InvoiceType {
+  devis           // Devis/proforma (non comptable)
+  facture         // Facture normale
+  bon_livraison   // Bon de livraison
+  avoir           // Note de crédit/avoir
+  commande        // Bon de commande
+}
+
+enum InvoiceStatus {
+  brouillon       // En cours de rédaction (modifiable)
+  envoyee         // Envoyée au client
+  partiellement_payee
+  payee           // Entièrement payée
+  annulee         // Annulée (avec avoir lié)
+  impayee         // Impayée (après échéance)
 }
 
 model InvoiceItem {
   id              String   @id @default(cuid())
   invoiceId       String
-  invoice         Invoice  @relation(fields: [invoiceId], references: [id])
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
   productId       String?
   product         Product? @relation(fields: [productId], references: [id])
   
+  // Description du produit/service
   description     String
+  reference       String?  // Référence produit
+  
+  // Quantités et prix unitaire
   quantity        Float    @default(1.0)
-  priceHT         Float
+  unit            String   @default("unité")
+  priceHT         Float    @default(0.0)
+  
+  // Remise ligne
+  discountPercent Float    @default(0.0)
+  discountAmount  Float    @default(0.0)
+  
+  // TVA
   tvaRate         Float    @default(20.0)
-  totalHT         Float
-  tvaAmount       Float
-  totalTTC        Float
+  tvaAmount       Float    @default(0.0)
+  
+  // Totaux ligne
+  totalHT         Float    @default(0.0) // (quantity * priceHT) - discounts
+  totalTTC        Float    @default(0.0)
+  
+  // Ordre d'affichage
+  sortOrder       Int      @default(0)
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  
+  @@index([invoiceId])
+  @@index([productId])
 }
 
 model Payment {
   id              String   @id @default(cuid())
+  tenantId        String
   invoiceId       String
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
   invoice         Invoice  @relation(fields: [invoiceId], references: [id])
+  
   amount          Float
+  currency        String   @default("MAD")
+  
   date            DateTime @default(now())
-  method          String   @default("especes") // especes, virement, cheque, carte
-  reference       String?  // Référence du paiement (numéro chèque, virement, etc.)
+  paymentDate     DateTime? // Date effective de paiement
+  
+  method          PaymentMethod @default(especes)
+  reference       String?  // N° chèque, référence virement, etc.
+  bankName        String?  // Nom de la banque (si chèque/virement)
+  
   notes           String?
+  
+  // Rapprochement bancaire
+  reconciled      Boolean  @default(false)
+  reconciledAt    DateTime?
+  
+  createdBy       String?
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  
+  @@index([invoiceId])
+  @@index([tenantId])
+  @@index([date])
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum PaymentMethod {
+  especes
+  virement
+  cheque
+  carte
+  effet
+  autres
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ============================================
+// GESTION DE STOCK
+// ============================================
+
+model StockMovement {
+  id              String   @id @default(cuid())
+  tenantId        String
+  productId       String
+  warehouseId     String?
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+  product         Product  @relation(fields: [productId], references: [id])
+  warehouse       Warehouse? @relation(fields: [warehouseId], references: [id])
+  
+  type            MovementType // entree, sortie, ajustement, transfert, inventaire
+  quantity        Float    // Quantité (positif=entrée, négatif=sortie)
+  
+  // Référence liée
+  referenceType   String?  // invoice, purchase_order, adjustment, etc.
+  referenceId     String?  // ID du document lié
+  
+  // Informations
+  reason          String?  // Motif du mouvement
+  notes           String?
+  
+  // Valeur
+  unitCost        Float?   // Coût unitaire (pour valorisation)
+  totalValue      Float?   // Valeur totale
+  
+  // Stock après mouvement
+  stockBefore     Float
+  stockAfter      Float
+  
+  performedBy     String?  // Utilisateur ayant effectué le mouvement
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([productId])
+  @@index([warehouseId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum MovementType {
+  entree          // Entrée de stock (achat, production, retour)
+  sortie          // Sortie de stock (vente, consommation)
+  ajustement      // Ajustement (correction)
+  transfert       // Transfert entre entrepôts
+  inventaire      // Inventaire physique
+}
+
+// ============================================
+// AUDIT & CONFORMITÉ (Loi 09-08 CNDP)
+// ============================================
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  tenantId        String?
+  
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id])
+  
+  // Action
+  action          AuditAction // create, update, delete, view, export, login, logout
+  entityType      String   // Invoice, Client, Product, User, etc.
+  entityId        String?
+  
+  // Utilisateur
+  userId          String?
+  userEmail       String?
+  userName        String?
+  
+  // Détails
+  ipAddress       String?
+  userAgent       String?
+  metadata        String?  // JSON avec détails supplémentaires
+  
+  // Anciennes et nouvelles valeurs (pour update/delete)
+  oldValue        String?  // JSON
+  newValue        String?  // JSON
+  
+  timestamp       DateTime @default(now())
+  
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+}
+
+enum AuditAction {
+  create
+  update
+  delete
+  view
+  export
+  print
+  login
+  logout
+  validate
+  cancel
+  send
+}
+
+// ============================================
+// CONFIGURATION & PARAMÈTRES
+// ============================================
+
+model Settings {
+  id              String   @id @default(cuid())
+  tenantId        String?
+  companyId       String?
+  
+  key             String
+  value           String   // JSON string
+  
+  isSystem        Boolean  @default(false) // Paramètres système (non modifiables par utilisateur)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([tenantId, companyId, key])
+  @@index([tenantId])
+  @@index([companyId])
 }

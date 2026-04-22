@@ -10,11 +10,7 @@
  */
 
 import { PrismaClient, InvoiceType, InvoiceStatus } from '@prisma/client';
-import {
-  calculateInvoiceTotals,
-  formatInvoiceNumber,
-  validateLegalMentions,
-} from '../lib/fiscal/tax-calculator';
+import { calculateInvoiceTotals } from '../lib/taxes';
 
 const prisma = new PrismaClient();
 

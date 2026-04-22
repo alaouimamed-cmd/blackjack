@@ -1,164 +1,203 @@
-# 🇲🇦 SaaS de Facturation Conforme Maroc
+# 🇲🇦 Application de Facturation Multi-Utilisateur - Maroc
 
-Application web multi-tenant de facturation et gestion de stock, strictement alignée sur les lois marocaines en vigueur.
+## SaaS de Facturation Conforme au Code Général des Impôts Marocain
 
-## ⚖️ Conformité Légale
+Application web multi-tenant de facturation et gestion de stock, conçue pour être conforme aux exigences légales marocaines:
 
-- **Code Général des Impôts (CGI)** - Articles 91-100 (TVA), Article 142 (Timbre fiscal)
-- **Loi 09-08** - Protection des données personnelles (CNDP)
-- **Plan Comptable Marocain (PCM)** - Normes comptables
-- **Recommandations DGI** - Facturation électronique future
+- **Code Général des Impôts (CGI)** - Taux TVA, timbre fiscal
+- **Loi 09-08 (CNDP)** - Protection des données personnelles
+- **Plan Comptable Marocain** - Arrondis, écritures
+- **Recommandations DGI** - Numérotation, archivage
 
-## 🎯 Fonctionnalités Principales
+---
 
-### Facturation
-- ✅ Numérotation séquentielle immuable (Format: FAC-2025-0001)
-- ✅ Mentions légales obligatoires (ICE, IF, RC, Patente, MF)
-- ✅ Calcul automatique TVA (20%, 14%, 10%, 7%, 0%)
-- ✅ Timbre fiscal pour paiements en espèces > 5000 DH
-- ✅ Gestion des avoirs avec lien facture originale
-- ✅ Génération PDF conforme
-- ✅ Multi-devises (MAD par défaut)
-
-### Gestion Commerciale
-- ✅ Clients & Fournisseurs avec identifiants fiscaux
-- ✅ Produits & Catégories
-- ✅ Suivi de stock en temps réel
-- ✅ Mouvements de stock audités
-- ✅ Seuils d'alerte
-
-### Multi-Tenant & RBAC
-- ✅ Séparation logique des données par entreprise
-- ✅ 6 rôles prédéfinis (Admin, Directeur, Comptable, Commercial, Magasinier, Auditeur)
-- ✅ Permissions granulaires par action
-- ✅ Journal d'audit complet (loi 09-08)
-
-### Reporting & Fiscalité
-- ✅ Export déclarations DGI (mensuelles/trimestrielles)
-- ✅ Balance âgée clients/fournisseurs
-- ✅ Chiffre d'affaires par période
-- ✅ TVA collectée/déductible par taux
-
-## 🛠 Stack Technique
-
-- **Frontend**: Next.js 15 (App Router), TypeScript, TailwindCSS, Shadcn/ui
-- **Backend**: Next.js API Routes, Prisma ORM
-- **Database**: PostgreSQL 15+
-- **Auth**: JWT avec RBAC
-- **PDF**: @react-pdf/renderer
-- **Cache**: Redis (optionnel)
-
-## 📁 Structure du Projet
+## 🏗️ Architecture
 
 ```
-/workspace
-├── prisma/
-│   └── schema.prisma          # Schéma de données complet
-├── src/
-│   ├── app/                   # Next.js App Router
-│   │   ├── api/              # Routes API
-│   │   ├── dashboard/        # Interface protégée
-│   │   ├── invoices/         # Gestion factures
-│   │   ├── clients/          # Gestion clients
-│   │   └── products/         # Gestion produits
-│   ├── lib/
-│   │   └── fiscal/
-│   │       └── tax-calculator.ts  # Calculs TVA conformes CGI
-│   ├── services/
-│   │   ├── invoice.service.ts     # Logique métier facturation
-│   │   └── pdf-generator.tsx      # Génération PDF
-│   └── middleware/
-│       └── auth.ts                # Authentification & RBAC
-├── COMPLIANCE_CHECKLIST.md   # Checklist conformité légale
-├── INSTALL_GUIDE.md          # Guide d'installation
-└── TEST_STRATEGY.md          # Stratégie de tests
+┌─────────────────────────────────────────────────────────────┐
+│                    Next.js 15 (App Router)                   │
+├─────────────────────────────────────────────────────────────┤
+│  Frontend (React 19 + TypeScript + TailwindCSS)             │
+│  Dashboard | Factures | Clients | Produits | Stock          │
+├─────────────────────────────────────────────────────────────┤
+│  API Routes (Next.js API)                                    │
+│  /api/auth | /api/invoices | /api/clients | /api/products   │
+├─────────────────────────────────────────────────────────────┤
+│  Services Métier                                             │
+│  invoice.service.ts | pdf-generator.tsx | taxes.ts          │
+├─────────────────────────────────────────────────────────────┤
+│  Prisma ORM + SQLite/PostgreSQL                              │
+│  Multi-tenancy | Audit trail | RBAC                         │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 🚀 Démarrage Rapide
+---
 
-### 1. Installation
+## 📋 Fonctionnalités
 
+### ✅ Facturation
+- Création de factures, devis, bons de livraison, avoirs
+- Numérotation automatique séquentielle (FAC-2025-001)
+- Calcul automatique TVA (20%, 14%, 10%, 7%, 0%)
+- Timbre fiscal automatique (paiements espèces > 5000 DH)
+- Mentions légales obligatoires (ICE, IF, RC, Patente, MF)
+- Immutabilité après validation
+- Lien avoir/facture originale
+
+### 👥 Multi-Utilisateur & RBAC
+| Rôle | Permissions |
+|------|-------------|
+| **Admin** | Accès complet |
+| **Directeur** | Validation, reporting |
+| **Comptable** | Factures, paiements, déclarations |
+| **Commercial** | Devis, clients, factures |
+| **Magasinier** | Produits, stock |
+| **Auditeur** | Lecture seule, logs |
+
+### 📊 Conformité
+- Export déclaration TVA
+- Journal d'audit (10 ans)
+- Export PDF/CSV
+
+---
+
+## 🚀 Installation
+
+### 1. Installer les dépendances
 ```bash
 npm install
 ```
 
-### 2. Configuration
-
-Créer `.env`:
-
-```bash
-DATABASE_URL="postgresql://user:password@localhost:5432/moroccan_invoicing"
+### 2. Variables d'environnement (.env)
+```env
+DATABASE_URL="file:./db/dev.db"
 JWT_SECRET="votre-secret-securise"
+NEXT_PUBLIC_APP_NAME="Facturation Maroc"
 ```
 
-### 3. Base de Données
-
+### 3. Initialiser la base de données
 ```bash
-docker-compose up -d postgres  # Ou utiliser PostgreSQL local
+npm run db:push
 npm run db:generate
-npm run db:migrate
 ```
 
-### 4. Lancement
-
+### 4. Démarrer
 ```bash
 npm run dev
 ```
 
-Accéder à http://localhost:3000
-
-## 📚 Documentation
-
-- [Checklist de Conformité](./COMPLIANCE_CHECKLIST.md) - Exigences légales DGI/CNDP
-- [Guide d'Installation](./INSTALL_GUIDE.md) - Déploiement local, Docker, Cloud
-- [Stratégie de Tests](./TEST_STRATEGY.md) - Tests unitaires, intégration, E2E
-
-## 🔐 Sécurité
-
-- Hash des mots de passe (bcrypt)
-- Tokens JWT avec expiration
-- Protection CSRF/XSS/SQLi
-- Rate limiting API
-- Headers de sécurité (HSTS, CSP)
-- Audit trail immutable
-
-## 📊 Rôles Utilisateurs
-
-| Rôle | Permissions Principales |
-|------|------------------------|
-| ADMIN | Accès total, configuration |
-| DIRECTEUR | Validation, reporting |
-| COMPTABLE | Factures, avoirs, déclarations |
-| COMMERCIAL | Devis, clients |
-| MAGASINIER | Produits, stock |
-| AUDITEUR | Lecture seule, logs |
-
-## ⚠️ Limites & Recommandations
-
-### Validation Requise
-- **Expert-comptable**: Valider mentions légales avant production
-- **Avocat**: CGU/CGV conformes droit marocain
-- **DGI**: Surveiller évolutions e-facturation
-
-### Évolutions Futures
-- E-facturation obligatoire (calendrier DGI à venir)
-- QR Code sur factures
-- Signature électronique
-- Certification logiciel
-
-## 📞 Références Officielles
-
-- DGI: www.tax.gov.ma
-- CNDP: www.cndp.ma
-- OMPIC (ICE): www.ompic.ma
-- Bulletin Officiel: www.secretariatgeneral.gov.ma
-
-## 📄 Licence
-
-Propriétaire - Tous droits réservés
+Accès: http://localhost:3000
 
 ---
 
-**Version**: 1.0.0  
-**Conforme législation 2025**  
-*Dernière mise à jour: Janvier 2025*
+## 📁 Structure
+
+```
+/workspace
+├── prisma/schema.prisma    # Modèle de données
+├── src/
+│   ├── app/                # Pages Next.js
+│   ├── lib/taxes.ts        # Calculs fiscaux
+│   ├── services/           # Services métier
+│   └── middleware/auth.ts  # Auth & RBAC
+├── db/dev.db               # Base SQLite
+└── README.md
+```
+
+---
+
+## ⚖️ Conformité Légale
+
+### Mentions Obligatoires (CGI Art. 144)
+✅ Numéro séquentiel unique  
+✅ Date d'émission  
+✅ Identité vendeur/acheteur (ICE, IF, RC, Patente, MF)  
+✅ Désignation, quantité, prix HT  
+✅ TVA (taux et montant)  
+✅ Total HT, TVA, TTC  
+✅ Conditions de paiement  
+
+### TVA (CGI)
+| Taux | Application |
+|------|-------------|
+| 20% | Normal |
+| 14% | Eau, électricité |
+| 10% | Transport, hôtellerie |
+| 7%  | Produits 1ère nécessité |
+| 0%  | Exonérations |
+
+### Timbre Fiscal
+- Espèces > 5000 DH
+- 0.50 DH / 100 DH (max 50 DH)
+
+### Archivage
+- Durée: 10 ans
+- Audit trail complet
+
+---
+
+## 🔐 Sécurité
+
+- JWT 24h
+- bcrypt/argon2
+- RBAC granulaire
+- Protection XSS/CSRF/SQLi
+- Multi-tenant isolé
+
+---
+
+## 📦 API Principales
+
+```
+POST   /api/auth/login
+GET    /api/invoices
+POST   /api/invoices
+POST   /api/invoices/:id/validate
+POST   /api/invoices/:id/cancel
+GET    /api/clients
+POST   /api/products
+GET    /api/reports/tva
+```
+
+---
+
+## 🚢 Déploiement
+
+### Production Checklist
+- [ ] Changer JWT_SECRET
+- [ ] PostgreSQL (pas SQLite)
+- [ ] HTTPS/TLS
+- [ ] Backups automatiques
+- [ ] Monitoring
+
+---
+
+## ⚠️ Recommandations
+
+### À valider avec expert-comptable
+- Taux TVA secteur
+- Régime fiscal
+- Obligations déclaratives
+
+### Évolutions DGI
+- E-facturation
+- QR code
+- Transmission directe DGI
+
+### Bonnes pratiques
+1. Hébergement Maroc (CNDP)
+2. Backups immuables (10 ans)
+3. Validation factures par expert-comptable
+4. Monitoring anomalies
+
+---
+
+## 📚 Documentation Complète
+
+- [INSTALL_GUIDE.md](./INSTALL_GUIDE.md)
+- [COMPLIANCE_CHECKLIST.md](./COMPLIANCE_CHECKLIST.md)
+- [TEST_STRATEGY.md](./TEST_STRATEGY.md)
+
+---
+
+**Conforme:** CGI Maroc, Loi 09-08 CNDP, PCM, DGI
