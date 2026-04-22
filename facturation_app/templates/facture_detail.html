@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Facture {{ facture.numero }} - Facturation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Facture {{ facture.numero }}</h2>
+    <a href="{{ url_for('factures') }}" class="btn">Retour à la liste</a>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <div>
+            <h3>Client</h3>
+            <p><strong>{{ facture.client.nom }}</strong></p>
+            {% if facture.client.email %}<p>Email: {{ facture.client.email }}</p>{% endif %}
+            {% if facture.client.telephone %}<p>Tél: {{ facture.client.telephone }}</p>{% endif %}
+            {% if facture.client.adresse %}<p>Adresse: {{ facture.client.adresse }}</p>{% endif %}
+        </div>
+        <div style="text-align: right;">
+            <h3>Informations</h3>
+            <p>Date de création: {{ facture.date_creation.strftime('%d/%m/%Y') }}</p>
+            {% if facture.date_echeance %}
+            <p>Date d'échéance: {{ facture.date_echeance.strftime('%d/%m/%Y') }}</p>
+            {% endif %}
+            <p>Statut: <span class="statut statut-{{ facture.statut }}">{{ facture.statut }}</span></p>
+        </div>
+    </div>
+    
+    <h3>Détail des lignes</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Quantité</th>
+                <th>Prix unitaire</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in facture.lignes %}
+            <tr>
+                <td>{{ ligne.description }}</td>
+                <td>{{ ligne.quantite }}</td>
+                <td>{{ "%.2f"|format(ligne.prix_unitaire) }} €</td>
+                <td>{{ "%.2f"|format(ligne.total) }} €</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" style="text-align: right;"><strong>Total TTC</strong></td>
+                <td><strong>{{ "%.2f"|format(facture.total) }} €</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <div style="margin-top: 20px;">
+        {% if facture.statut == 'en_attente' %}
+        <form method="POST" action="{{ url_for('payer_facture', id=facture.id) }}" style="display:inline;">
+            <button type="submit" class="btn btn-success">Marquer comme payée</button>
+        </form>
+        <form method="POST" action="{{ url_for('annuler_facture', id=facture.id) }}" style="display:inline;">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir annuler cette facture ?')">Annuler</button>
+        </form>
+        {% endif %}
+        <button onclick="window.print()" class="btn">Imprimer</button>
+    </div>
+</div>
+{% endblock %}

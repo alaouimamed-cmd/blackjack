@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Clients - Facturation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Gestion des clients</h2>
+    <a href="{{ url_for('ajouter_client') }}" class="btn">Ajouter un client</a>
+</div>
+
+{% if clients %}
+<table>
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Téléphone</th>
+            <th>Adresse</th>
+            <th>Nombre de factures</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for client in clients %}
+        <tr>
+            <td>{{ client.nom }}</td>
+            <td>{{ client.email or '-' }}</td>
+            <td>{{ client.telephone or '-' }}</td>
+            <td>{{ client.adresse or '-' }}</td>
+            <td>{{ client.factures|length }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="card">
+    <p>Aucun client enregistré.</p>
+    <a href="{{ url_for('ajouter_client') }}" class="btn">Ajouter votre premier client</a>
+</div>
+{% endif %}
+{% endblock %}

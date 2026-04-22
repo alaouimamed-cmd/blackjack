@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Créer une facture - Facturation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Créer une nouvelle facture</h2>
+</div>
+
+<div class="card">
+    <form method="POST" id="factureForm">
+        <div class="form-group">
+            <label for="numero">Numéro de facture *</label>
+            <input type="text" id="numero" name="numero" required placeholder="Ex: FAC-2024-001">
+        </div>
+        
+        <div class="form-group">
+            <label for="client_id">Client *</label>
+            <select id="client_id" name="client_id" required>
+                <option value="">Sélectionner un client</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}">{{ client.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="date_echeance">Date d'échéance *</label>
+            <input type="date" id="date_echeance" name="date_echeance" required>
+        </div>
+        
+        <h3>Lignes de facture</h3>
+        <div id="lignesContainer">
+            <div class="ligne-form" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;">
+                <div class="form-group">
+                    <label>Description *</label>
+                    <input type="text" name="description[]" required>
+                </div>
+                <div class="form-group">
+                    <label>Quantité</label>
+                    <input type="number" name="quantite[]" value="1" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Prix unitaire (€) *</label>
+                    <input type="number" name="prix_unitaire[]" step="0.01" min="0" required>
+                </div>
+            </div>
+        </div>
+        
+        <button type="button" class="btn" onclick="ajouterLigne()">+ Ajouter une ligne</button>
+        <hr style="margin: 20px 0;">
+        
+        <button type="submit" class="btn btn-success">Créer la facture</button>
+        <a href="{{ url_for('factures') }}" class="btn">Annuler</a>
+    </form>
+</div>
+
+<script>
+    function ajouterLigne() {
+        const container = document.getElementById('lignesContainer');
+        const nouvelleLigne = document.createElement('div');
+        nouvelleLigne.className = 'ligne-form';
+        nouvelleLigne.style.cssText = 'border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 5px;';
+        nouvelleLigne.innerHTML = `
+            <div class="form-group">
+                <label>Description *</label>
+                <input type="text" name="description[]" required>
+            </div>
+            <div class="form-group">
+                <label>Quantité</label>
+                <input type="number" name="quantite[]" value="1" min="1">
+            </div>
+            <div class="form-group">
+                <label>Prix unitaire (€) *</label>
+                <input type="number" name="prix_unitaire[]" step="0.01" min="0" required>
+            </div>
+            <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Supprimer</button>
+        `;
+        container.appendChild(nouvelleLigne);
+    }
+</script>
+{% endblock %}

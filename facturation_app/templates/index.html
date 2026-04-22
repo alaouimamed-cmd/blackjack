@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Accueil - Facturation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Tableau de bord</h2>
+</div>
+
+<div class="card">
+    <h3>Dernières factures</h3>
+    {% if factures %}
+    <table>
+        <thead>
+            <tr>
+                <th>Numéro</th>
+                <th>Client</th>
+                <th>Date</th>
+                <th>Total</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for facture in factures[:5] %}
+            <tr>
+                <td>{{ facture.numero }}</td>
+                <td>{{ facture.client.nom }}</td>
+                <td>{{ facture.date_creation.strftime('%d/%m/%Y') }}</td>
+                <td>{{ "%.2f"|format(facture.total) }} €</td>
+                <td><span class="statut statut-{{ facture.statut }}">{{ facture.statut }}</span></td>
+                <td>
+                    <a href="{{ url_for('voir_facture', id=facture.id) }}" class="btn">Voir</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Aucune facture pour le moment.</p>
+    <a href="{{ url_for('creer_facture') }}" class="btn">Créer une facture</a>
+    {% endif %}
+</div>
+{% endblock %}
