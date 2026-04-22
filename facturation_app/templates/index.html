@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Accueil - Facturation{% endblock %}
+
+{% block content %}
+<h2>Liste des Factures</h2>
+
+<a href="/facture/creer" class="btn">Créer une nouvelle facture</a>
+
+<table>
+    <thead>
+        <tr>
+            <th>Numéro</th>
+            <th>Client</th>
+            <th>Date de création</th>
+            <th>Date d'échéance</th>
+            <th>Statut</th>
+            <th>Total</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for facture in factures %}
+        <tr>
+            <td>{{ facture.numero }}</td>
+            <td>{{ facture.client.nom }}</td>
+            <td>{{ facture.date_creation.strftime('%d/%m/%Y') }}</td>
+            <td>{{ facture.date_echeance.strftime('%d/%m/%Y') if facture.date_echeance else '-' }}</td>
+            <td><span class="statut {{ facture.statut }}">{{ facture.statut }}</span></td>
+            <td>{{ "%.2f"|format(facture.total) }} €</td>
+            <td>
+                <a href="/facture/{{ facture.id }}" class="btn btn-small">Voir</a>
+                <a href="/facture/{{ facture.id }}/modifier" class="btn btn-small">Modifier</a>
+                <form action="/facture/{{ facture.id }}/supprimer" method="POST" style="display:inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette facture ?')">
+                    <button type="submit" class="btn btn-small">Supprimer</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="9" style="text-align:center;">Aucune facture trouvée</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

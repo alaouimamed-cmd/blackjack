@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Détail de la Facture - Facturation{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Facture #{{ facture.numero }}</h2>
+    
+    <p><strong>Client:</strong> {{ facture.client.nom }}</p>
+    <p><strong>Date de création:</strong> {{ facture.date_creation.strftime('%d/%m/%Y') }}</p>
+    <p><strong>Date d'échéance:</strong> {{ facture.date_echeance.strftime('%d/%m/%Y') if facture.date_echeance else '-' }}</p>
+    <p><strong>Statut:</strong> <span class="statut {{ facture.statut }}">{{ facture.statut }}</span></p>
+    
+    <div style="margin: 20px 0;">
+        <a href="/facture/{{ facture.id }}/statut/payee" class="btn btn-small">Marquer comme payée</a>
+        <a href="/facture/{{ facture.id }}/statut/en_attente" class="btn btn-small">Marquer comme en attente</a>
+        <a href="/facture/{{ facture.id }}/statut/annulee" class="btn btn-small">Marquer comme annulée</a>
+    </div>
+    
+    <h3>Lignes de facture</h3>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Quantité</th>
+                <th>Prix unitaire</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in facture.lignes %}
+            <tr>
+                <td>{{ ligne.description }}</td>
+                <td>{{ ligne.quantite }}</td>
+                <td>{{ "%.2f"|format(ligne.prix_unitaire) }} €</td>
+                <td>{{ "%.2f"|format(ligne.total) }} €</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align:center;">Aucune ligne dans cette facture</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" style="text-align:right;"><strong>Total:</strong></td>
+                <td><strong class="total">{{ "%.2f"|format(facture.total) }} €</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <a href="/facture/{{ facture.id }}/ajouter-ligne" class="btn">Ajouter une ligne</a>
+    <a href="/facture/{{ facture.id }}/modifier" class="btn">Modifier</a>
+    <a href="/" class="btn" style="background:#666;">Retour</a>
+</div>
+{% endblock %}

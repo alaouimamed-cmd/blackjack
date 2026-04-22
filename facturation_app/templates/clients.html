@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Clients - Facturation{% endblock %}
+
+{% block content %}
+<h2>Liste des Clients</h2>
+
+<a href="/client/ajouter" class="btn">Ajouter un client</a>
+
+<table>
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Téléphone</th>
+            <th>Adresse</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for client in clients %}
+        <tr>
+            <td>{{ client.nom }}</td>
+            <td>{{ client.email or '-' }}</td>
+            <td>{{ client.telephone or '-' }}</td>
+            <td>{{ client.adresse or '-' }}</td>
+            <td>
+                <a href="/client/{{ client.id }}/modifier" class="btn btn-small">Modifier</a>
+                <form action="/client/{{ client.id }}/supprimer" method="POST" style="display:inline;" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce client ?')">
+                    <button type="submit" class="btn btn-small">Supprimer</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="5" style="text-align:center;">Aucun client trouvé</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

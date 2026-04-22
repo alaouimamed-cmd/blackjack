@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Ajouter une Ligne - Facturation{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Ajouter une ligne à la facture #{{ facture.numero }}</h2>
+    
+    <form method="POST">
+        <div class="form-group">
+            <label for="description">Description *</label>
+            <input type="text" id="description" name="description" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="quantite">Quantité</label>
+            <input type="number" id="quantite" name="quantite" value="1" min="1">
+        </div>
+        
+        <div class="form-group">
+            <label for="prix_unitaire">Prix unitaire (€) *</label>
+            <input type="number" id="prix_unitaire" name="prix_unitaire" step="0.01" min="0" required>
+        </div>
+        
+        <button type="submit" class="btn">Ajouter</button>
+        <a href="/facture/{{ facture.id }}" class="btn" style="background:#666;">Annuler</a>
+    </form>
+    
+    <h3>Lignes actuelles</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Quantité</th>
+                <th>Prix unitaire</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in facture.lignes %}
+            <tr>
+                <td>{{ ligne.description }}</td>
+                <td>{{ ligne.quantite }}</td>
+                <td>{{ "%.2f"|format(ligne.prix_unitaire) }} €</td>
+                <td>{{ "%.2f"|format(ligne.total) }} €</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align:center;">Aucune ligne dans cette facture</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" style="text-align:right;"><strong>Total:</strong></td>
+                <td><strong class="total">{{ "%.2f"|format(facture.total) }} €</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}
