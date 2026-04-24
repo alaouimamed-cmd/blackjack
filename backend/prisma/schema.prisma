@@ -1,0 +1,461 @@
+// 🇲🇦 Schéma Prisma - SaaS Gestion de Stock & Facturation
+// Conformité : CGI, DGI, CNDP (Loi 09-08), PCG Maroc
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  ADMIN
+  RESPONSABLE_STOCK
+  COMPTABLE
+  COMMERCIAL
+  CLIENT_PORTAIL
+}
+
+enum DocumentType {
+  QUOTATION    // Devis
+  ORDER        // Commande
+  DELIVERY     // Bon de Livraison
+  INVOICE      // Facture
+  CREDIT_NOTE  // Avoir
+}
+
+enum DocumentStatus {
+  DRAFT       // Brouillon
+  SENT        // Envoyé
+  ACCEPTED    // Accepté
+  REJECTED    // Rejeté
+  PARTIAL     // Partiellement livré/facturé
+  COMPLETED   // Complété
+  CANCELLED   // Annulé
+}
+
+enum MovementType {
+  ENTRY       // Entrée de stock
+  EXIT        // Sortie de stock
+  TRANSFER    // Transfert interne
+  ADJUSTMENT  // Ajustement inventaire
+  RETURN      // Retour client
+}
+
+enum ValuationMethod {
+  CMUP        // Coût Moyen Unitaire Pondéré
+  FIFO        // First In First Out
+}
+
+enum VatRate {
+  EXEMPT      // 0% - Exonéré
+  REDUCED_1   // 10% - Taux réduit
+  REDUCED_2   // 14% - Taux réduit 2
+  STANDARD    // 20% - Taux normal
+  SUSPENDED   // Suspension temporaire
+}
+
+// ============================================================================
+// UTILISATEURS & AUTHENTIFICATION
+// ============================================================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          UserRole  @default(COMMERCIAL)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  auditLogs     AuditLog[]
+  documents     Document[]
+  sessions      Session[]
+  
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================================================
+// ENTREPRISE & CONFORMITÉ MAROCAINE
+// ============================================================================
+
+model Company {
+  id              String   @id @default(uuid())
+  name            String   // Raison sociale
+  ice             String   @unique // Identifiant Commun de l'Entreprise (OBLIGATOIRE)
+  rc              String   // Registre de Commerce
+  if              String   // Identifiant Fiscal
+  patente         String   // Patente
+  address         String
+  city            String
+  postalCode      String?
+  phone           String?
+  email           String?
+  website         String?
+  logoUrl         String?
+  
+  // Configuration TVA
+  defaultVatRate  VatRate  @default(STANDARD)
+  isExporter      Boolean  @default(false) // Pour régimes spéciaux
+  isFreeZone      Boolean  @default(false) // Zone franche
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  customers       Customer[]
+  documents       Document[]
+  
+  @@index([ice])
+  @@index([rc])
+}
+
+model Customer {
+  id              String   @id @default(uuid())
+  companyId       String?  // NULL pour clients particuliers
+  type            String   @default("PROFESSIONAL") // PROFESSIONAL ou INDIVIDUAL
+  
+  // Informations professionnelles (si applicable)
+  companyName     String?
+  ice             String?  // Obligatoire pour professionnels
+  rc              String?
+  if              String?
+  patente         String?
+  
+  // Informations personnelles (CNDP - minimisation)
+  firstName       String?
+  lastName        String?
+  cin             String?  // Carte d'Identité Nationale (chiffré)
+  
+  // Contact
+  email           String?
+  phone           String?
+  address         String?
+  city            String?
+  postalCode      String?
+  country         String   @default("MA")
+  
+  // Commercial
+  creditLimit     Decimal  @default(0) @db.Decimal(15, 2)
+  paymentTerms    Int      @default(30) // Jours de crédit
+  
+  isActive        Boolean  @default(true)
+  consentDate     DateTime? // CNDP - Consentement explicite
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  company         Company? @relation(fields: [companyId], references: [id])
+  documents       Document[]
+  
+  @@index([ice])
+  @@index([email])
+  @@index([companyId])
+}
+
+// ============================================================================
+// PRODUITS & STOCK
+// ============================================================================
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  parentId    String?
+  description String?
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  parent      Category? @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryTree")
+  products    Product[]
+  
+  @@index([parentId])
+}
+
+model Product {
+  id                String    @id @default(uuid())
+  sku               String    @unique // Code article
+  name              String
+  description       String?
+  categoryId        String?
+  
+  // Prix & TVA
+  salePrice         Decimal   @db.Decimal(15, 4) // 4 décimales pour précision
+  vatRate           VatRate   @default(STANDARD)
+  isExempt          Boolean   @default(false)
+  
+  // Stock
+  currentStock      Int       @default(0)
+  reservedStock     Int       @default(0) // Réservé par documents en cours
+  minStock          Int       @default(0) // Seuil d'alerte
+  maxStock          Int       @default(0) // Capacité max
+  
+  // Valorisation (PCG)
+  valuationMethod   ValuationMethod @default(CMUP)
+  averageCost       Decimal   @default(0) @db.Decimal(15, 4) // CMUP
+  
+  // Métadonnées
+  barcode           String?
+  unit              String    @default("PIECE") // UNITÉ, KG, LITRE, etc.
+  weight            Decimal?  @db.Decimal(10, 3)
+  dimensions        String?   // L x l x H
+  
+  isActive          Boolean   @default(true)
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  category          Category? @relation(fields: [categoryId], references: [id])
+  stockMovements    StockMovement[]
+  stockLots         StockLot[]
+  documentLines     DocumentLine[]
+  
+  @@index([sku])
+  @@index([categoryId])
+  @@index([barcode])
+}
+
+model StockLot {
+  id              String   @id @default(uuid())
+  productId       String
+  quantity        Int
+  unitCost        Decimal  @db.Decimal(15, 4)
+  remainingQty    Int
+  supplierRef     String?  // Référence fournisseur
+  batchNumber     String?  // Numéro de lot
+  expiryDate      DateTime?
+  
+  receivedAt      DateTime @default(now())
+  
+  // Relations
+  product         Product  @relation(fields: [productId], references: [id])
+  movements       StockMovement[]
+  
+  @@index([productId])
+  @@index([batchNumber])
+}
+
+model StockMovement {
+  id              String       @id @default(uuid())
+  productId       String
+  lotId           String?      // Pour traçabilité FIFO
+  type            MovementType
+  quantity        Int
+  unitCost        Decimal      @db.Decimal(15, 4)
+  totalValue      Decimal      @db.Decimal(15, 2)
+  
+  reference       String?      // Référence document lié
+  reason          String?      // Motif (pour ajustements)
+  
+  performedBy     String
+  createdAt       DateTime     @default(now())
+  
+  // Relations
+  product         Product      @relation(fields: [productId], references: [id])
+  lot             StockLot?    @relation(fields: [lotId], references: [id])
+  
+  @@index([productId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// DOCUMENTS COMMERCIAUX (Cycle de vente complet)
+// ============================================================================
+
+model Document {
+  id                  String        @id @default(uuid())
+  number              String        @unique // Numérotation inviolable
+  type                DocumentType
+  status              DocumentStatus @default(DRAFT)
+  
+  // Dates importantes
+  issueDate           DateTime      @default(now())
+  dueDate             DateTime?
+  
+  // Parties
+  sellerCompanyId     String
+  customerId          String
+  
+  // Contenu financier
+  currency            String        @default("MAD")
+  exchangeRate        Decimal       @default(1) @db.Decimal(10, 6)
+  
+  // Totaux (calculés, stockés pour intégrité)
+  subtotal            Decimal       @db.Decimal(15, 2) // Total HT avant remise
+  discountAmount      Decimal       @default(0) @db.Decimal(15, 2)
+  taxableBase         Decimal       @db.Decimal(15, 2) // Assiette TVA
+  vatAmount           Decimal       @default(0) @db.Decimal(15, 2)
+  total               Decimal       @db.Decimal(15, 2) // Total TTC
+  
+  // Détails TVA par taux (pour conformité DGI)
+  vatDetails          Json? // { "20%": { base: 1000, amount: 200 }, "10%": {...} }
+  
+  // Remises & Frais
+  discountPercent     Decimal?      @db.Decimal(5, 2)
+  shippingCost        Decimal       @default(0) @db.Decimal(15, 2)
+  otherCharges        Decimal       @default(0) @db.Decimal(15, 2)
+  
+  // Conditions
+  paymentTerms        String?       // Ex: "30 jours fin de mois"
+  notes               String?
+  footer              String?       // Mentions légales obligatoires
+  
+  // Intégrité & Audit (Anti-falsification DGI)
+  hash                String        @unique // SHA-256 du document
+  previousHash        String?       // Chaîne cryptographique
+  signedAt            DateTime?
+  signedBy            String?
+  
+  // Export E-Facturation
+  exportedToDgi       Boolean       @default(false)
+  exportDate          DateTime?
+  exportReference     String?
+  
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  // Relations
+  seller              Company       @relation(fields: [sellerCompanyId], references: [id])
+  customer            Customer      @relation(fields: [customerId], references: [id])
+  lines               DocumentLine[]
+  auditLogs           AuditLog[]
+  
+  @@index([number])
+  @@index([type])
+  @@index([status])
+  @@index([customerId])
+  @@index([issueDate])
+}
+
+model DocumentLine {
+  id              String   @id @default(uuid())
+  documentId      String
+  lineNumber      Int      // Ordre des lignes (inviolable)
+  
+  productId       String?
+  productName     String   // Copie au moment de la facturation
+  productSku      String?  // Copie au moment de la facturation
+  
+  description     String?
+  quantity        Decimal  @db.Decimal(15, 4)
+  unit            String   @default("PIECE")
+  unitPrice       Decimal  @db.Decimal(15, 4) // Prix unitaire HT
+  
+  discountPercent Decimal  @default(0) @db.Decimal(5, 2)
+  discountAmount  Decimal  @default(0) @db.Decimal(15, 2)
+  
+  vatRate         VatRate  @default(STANDARD)
+  vatAmount       Decimal  @db.Decimal(15, 2)
+  
+  lineTotal       Decimal  @db.Decimal(15, 2) // Total ligne HT
+  lineTotalTTC    Decimal  @db.Decimal(15, 2) // Total ligne TTC
+  
+  // Stock impact
+  stockImpacted   Boolean  @default(false)
+  stockQuantity   Int      @default(0) // Quantité déduite/réintégrée
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  product         Product? @relation(fields: [productId], references: [id])
+  
+  @@index([documentId])
+  @@index([lineNumber])
+}
+
+// ============================================================================
+// AUDIT & CONFORMITÉ (CNDP + DGI)
+// ============================================================================
+
+model AuditLog {
+  id              String   @id @default(uuid())
+  action          String   // CREATE, UPDATE, DELETE, VIEW, EXPORT, etc.
+  entityType      String   // USER, DOCUMENT, PRODUCT, CUSTOMER, etc.
+  entityId        String
+  userId          String?
+  
+  // Contexte
+  ipAddress       String?
+  userAgent       String?
+  timestamp       DateTime @default(now())
+  
+  // Données (avant/après pour traçabilité complète)
+  before          Json?
+  after           Json?
+  metadata        Json?
+  
+  // Relations
+  user            User?    @relation(fields: [userId], references: [id])
+  document        Document?
+  
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([action])
+}
+
+// ============================================================================
+// CONFIGURATION & PARAMÈTRES
+// ============================================================================
+
+model Settings {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  value           Json
+  description     String?
+  isSecure        Boolean  @default(false) // Données sensibles chiffrées
+  
+  updatedAt       DateTime @updatedAt
+  
+  @@index([key])
+}
+
+// ============================================================================
+// INDEX GLOBAUX POUR PERFORMANCE
+// ============================================================================
+
+// Index composites pour requêtes fréquentes
+@@map("global_indexes") {
+  // Documents par période et statut
+  @@index([Document.type, Document.status, Document.issueDate])
+  
+  // Mouvements de stock par produit et date
+  @@index([StockMovement.productId, StockMovement.createdAt])
+  
+  // Clients par entreprise
+  @@index([Customer.companyId, Customer.isActive])
+}
