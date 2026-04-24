@@ -10,6 +10,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { ProductsModule } from './modules/products/products.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { StockModule } from './modules/stock/stock.module';
+import { PdfModule } from './modules/pdf/pdf.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { StockModule } from './modules/stock/stock.module';
     ProductsModule,
     DocumentsModule,
     StockModule,
+    PdfModule,
   ],
   providers: [PrismaService],
 })
